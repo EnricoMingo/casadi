@@ -133,6 +133,9 @@ namespace casadi {
                          "Use CasADi options 'warm_start_primal' and 'warm_start_dual' instead.");
           //} else if (op.first=="time_limit") {
           //  settings_.time_limit = op.second;
+          } else if (op.first=="linsys_solver_mkl_pardiso") {
+              if(op.second)
+                  settings_.linsys_solver = linsys_solver_type::MKL_PARDISO_SOLVER;
           } else {
             casadi_error("Not recognised");
           }
