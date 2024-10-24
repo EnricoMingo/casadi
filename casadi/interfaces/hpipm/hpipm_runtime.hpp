@@ -498,7 +498,7 @@ int casadi_hpipm_solve(casadi_hpipm_data<T1>* d, const double** arg, double** re
     for (i=0; i<p->N+1; i++)	d_ocp_qp_sol_set_x(i, d->hx[i], &qp_sol);
 
 
-    d_ocp_qp_print(&dim, &qp);
+    //d_ocp_qp_print(&dim, &qp);
     //m->fstats.at("solver").tic();
 		// call solver
 	  d_ocp_qp_ipm_solve(&qp, &qp_sol, &myarg, &workspace);
@@ -514,31 +514,31 @@ int casadi_hpipm_solve(casadi_hpipm_data<T1>* d, const double** arg, double** re
 
 	  double *stat;
     d_ocp_qp_ipm_get_stat(&workspace, &stat);
-    printf("\nalpha_aff\tmu_aff\t\tsigma\t\talpha\t\tmu\n");
-    d_print_exp_tran_mat(5, d->iter_count, stat, 5);
+    //printf("\nalpha_aff\tmu_aff\t\tsigma\t\talpha\t\tmu\n");
+    //d_print_exp_tran_mat(5, d->iter_count, stat, 5);
 
-    printf("\nHPIPM returned with flag %i.\n", d->return_status);
-    if(d->return_status == 0)
-		{
-        printf("\n -> QP solved!\n");
-		}
-	else if(d->return_status==1)
-		{
-        printf("\n -> Solver failed! Maximum number of iterations reached\n");
-		}
-	else if(d->return_status==2)
-		{
-        printf("\n -> Solver failed! Minimum step lenght reached\n");
-		}
-	else if(d->return_status==2)
-		{
-        printf("\n -> Solver failed! NaN in computations\n");
-		}
-	else
-		{
-        printf("\n -> Solver failed! Unknown return flag\n");
-		}
-	printf("\n\n");
+    //printf("\nHPIPM returned with flag %i.\n", d->return_status);
+    //if(d->return_status == 0)
+	//	{
+    //    printf("\n -> QP solved!\n");
+	//	}
+//	else if(d->return_status==1)
+	//	{
+  //      printf("\n -> Solver failed! Maximum number of iterations reached\n");
+	//	}
+	//else if(d->return_status==2)
+	//	{
+        //printf("\n -> Solver failed! Minimum step lenght reached\n");
+	//	}
+	//else if(d->return_status==2)
+	//	{
+        //printf("\n -> Solver failed! NaN in computations\n");
+	//	}
+	//else
+	//	{
+        //printf("\n -> Solver failed! Unknown return flag\n");
+	//	}
+	//printf("\n\n");
 
 
 	for(i=0; i<p->N+1; ++i) d_ocp_qp_sol_get_u(i, &qp_sol, d->hu[i]);
