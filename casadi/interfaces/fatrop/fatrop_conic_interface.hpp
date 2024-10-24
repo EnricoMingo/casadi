@@ -221,6 +221,9 @@ namespace casadi {
 
     bool warm_start_;
     double inf_;
+    bool debug_;
+    /// All FATROP options
+    Dict opts_;
 
   };
 

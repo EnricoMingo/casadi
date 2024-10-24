@@ -73,6 +73,9 @@ namespace casadi {
       {"structure_detection",
        {OT_STRING,
         "NONE | auto | manual"}},
+      {"debug",
+       {OT_BOOL,
+        "Produce debug information (default: false)"}},
       {"fatrop",
        {OT_DICT,
         "Options to be passed to fatrop"}}}
@@ -83,6 +86,7 @@ namespace casadi {
 
     casadi_int struct_cnt=0;
     structure_detection_ = STRUCTURE_NONE;
+    debug_ = false;
 
     // Read options
     for (auto&& op : opts) {
@@ -109,6 +113,10 @@ namespace casadi {
         } else {
           casadi_error("Unknown option for structure_detection: '" + v + "'.");
         }
+      } else if (op.first=="debug") {
+        debug_ = op.second;
+      } else if (op.first=="fatrop") {
+        opts_ = op.second;
       }
     }
 
@@ -131,7 +139,11 @@ namespace casadi {
     const std::vector<int>& nu = nus_;
 
     Sparsity lamg_csp_, lam_ulsp_, lam_uusp_, lam_xlsp_, lam_xusp_, lam_clsp_;
-
+    
+    if (debug_) {
+      A_.to_file("debug_fatrop_actual.mtx");
+    }
+    
     if (structure_detection_==STRUCTURE_AUTO) {
       /* General strategy: look for the xk+1 diagonal part in A
       */
@@ -220,6 +232,9 @@ namespace casadi {
       casadi_message("Using structure: N " + str(N_) + ", nx " + str(nx) + ", "
             "nu " + str(nu) + ", ng " + str(ng) + ".");
     }
+    
+    // Dor debugging purposes
+    std::vector< casadi_ocp_block > A_blocks, B_blocks, C_blocks, D_blocks;
 
     /* Disassemble A input into:
        A B I
@@ -232,6 +247,10 @@ namespace casadi {
     for (casadi_int k=0;k<N_;++k) { // Loop over blocks
       AB_blocks.push_back({offset_r,        offset_c,            nx[k+1], nx[k]+nu[k]});
       CD_blocks.push_back({offset_r+nx[k+1], offset_c,           ng[k], nx[k]+nu[k]});
+      A_blocks.push_back({offset_r, offset_c, nx[k+1], nx[k]});
+      B_blocks.push_back({offset_r, offset_c+nx[k], nx[k+1], nu[k]});
+      C_blocks.push_back({offset_r+nx[k+1], offset_c, ng[k], nx[k]});
+      D_blocks.push_back({offset_r+nx[k+1], offset_c+nx[k], ng[k], nu[k]});
       offset_c+= nx[k]+nu[k];
       if (k+1<N_)
         I_blocks.push_back({offset_r, offset_c, nx[k+1], nx[k+1]});
@@ -263,6 +282,16 @@ namespace casadi {
     Isp_ = blocksparsity(na_, nx_, I_blocks, true);
 
     Sparsity total = ABsp_ + CDsp_ + Isp_;
+    
+    if (debug_) {
+      total.to_file("debug_fatrop_expected.mtx");
+      blocksparsity(na_, nx_, A_blocks).to_file("debug_fatrop_A.mtx");
+      blocksparsity(na_, nx_, B_blocks).to_file("debug_fatrop_B.mtx");
+      blocksparsity(na_, nx_, C_blocks).to_file("debug_fatrop_C.mtx");
+      blocksparsity(na_, nx_, D_blocks).to_file("debug_fatrop_D.mtx");
+      Isp_.to_file("debug_fatrop_I.mtx");
+    }
+
 
     casadi_assert((A_ + total).nnz() == total.nnz(),
       "HPIPM: specified structure of A does not correspond to what the interface can handle. "
@@ -1058,7 +1087,7 @@ casadi_int i, column;
   int FatropConicInterface::
   solve(const double** arg, double** res, casadi_int* iw, double* w, void* mem) const {
     auto m = static_cast<FatropConicMemory*>(mem);
-
+    
 
     casadi_fatrop_conic_solve(&m->d, arg, res, iw, w);
 
@@ -1104,6 +1133,36 @@ casadi_int i, column;
 
     FatropOcpCSolver* s = fatrop_ocp_c_create(&ocp_interface, 0, 0);
     fatrop_ocp_c_set_option_bool(s, "accept_every_trial_step", false);
+    
+    
+    
+     for (const auto& kv : opts_) {
+      switch (fatrop_ocp_c_option_type(kv.first.c_str())) {
+        case 0:
+          fatrop_ocp_c_set_option_double(s, kv.first.c_str(), kv.second);
+          break;
+        case 1:
+          fatrop_ocp_c_set_option_int(s, kv.first.c_str(), kv.second.to_int());
+          break;
+        case 2:
+          fatrop_ocp_c_set_option_bool(s, kv.first.c_str(), kv.second.to_bool());
+          break;
+        case 3:
+          {
+            std::string ss = kv.second.to_string();
+            fatrop_ocp_c_set_option_string(s, kv.first.c_str(), ss.c_str());
+          }
+          break;
+        case -1:
+          casadi_error("Fatrop option not supported: " + kv.first);
+        default:
+          casadi_error("Unknown option type.");
+      }
+    }
+    
+    
+    
+    
 
     int ret = fatrop_ocp_c_solve(s);
 
